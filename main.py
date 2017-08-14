@@ -413,7 +413,7 @@ def vm_migration_state(select_current=0):
             '开始转换' in \
             get_migration_state[state_list_box.current()] \
             or \
-            task_running > 2 \:
+            task_running > 2 :
                 if '任务完成' not in get_migration_state[state_list_box.current()] \
                 or \
                 '失败' not in get_migration_state[state_list_box.current()]:
