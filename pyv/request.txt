@@ -1,0 +1,3 @@
+wget https://fedorapeople.org/groups/virt/virtio-win/virtio-win.repo \
+            -O /etc/yum.repos.d/virtio-win.repo
+yum install virt-v2v virtio-win -y

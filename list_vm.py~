@@ -1,0 +1,115 @@
+#!/usr/bin/env pythoni
+#encoding=utf-8
+# VMware vSphere Python SDK
+# Copyright (c) 2008-2015 VMware, Inc. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+"""
+Python program for listing the vms on an ESX / vCenter host
+"""
+
+from __future__ import print_function
+
+from pyVim.connect import SmartConnect, Disconnect
+from pyVmomi import vim
+
+import argparse
+import atexit
+import getpass
+import ssl
+import sys
+reload(sys)
+sys.setdefaultencoding(' utf-8 ')
+
+L = []
+
+def Get_VM_List(vm, depth=1):
+   global L
+   """
+   Print information for a particular virtual machine or recurse into a folder
+   or vApp with depth protection
+   """
+   maxdepth = 10
+
+   # if this is a group it will have children. if it does, recurse into them
+   # and then return
+   if hasattr(vm, 'childEntity'):
+      if depth > maxdepth:
+         return
+      vmList = vm.childEntity
+      for c in vmList:
+         L = Get_VM_List(c, depth+1)
+      return
+
+   # if this is a vApp, it likely contains child VMs
+   # (vApps can nest vApps, but it is hardly a common usecase, so ignore that)
+   if isinstance(vm, vim.VirtualApp):
+      vmList = vm.vm
+      for c in vmList:
+         L = Get_VM_List(c, depth + 1)
+      return
+
+   summary = vm.summary
+   L.append("{:^20}".format(summary.config.name)+\
+#     '\t'+summary.config.vmPathName+\
+      '|'+"{:^45}".format(summary.config.guestFullName)+\
+      '|'+"{:^11}".format(summary.runtime.powerState))
+#   print("Name       : ", summary.config.name)
+#   print("Path       : ", summary.config.vmPathName)
+#   print("Guest      : ", summary.config.guestFullName)
+#   annotation = summary.config.annotation
+#   if annotation != None and annotation != "":
+#      print("Annotation : ", annotation)
+#   print("State      : ", summary.runtime.powerState)
+#   if summary.guest != None:
+#      ip = summary.guest.ipAddress
+#      if ip != None and ip != "":
+#         print("IP         : ", ip)
+#   if summary.runtime.question != None:
+#      print("Question  : ", summary.runtime.question.text)
+#   print("")
+   return(L)
+
+def list_vm(host='10.16.170.253',
+            port=443,
+            user='administrator@vsphere.local',
+            pwd='P@ssw0rd'):
+#   if args.password:
+#      password = args.password
+#   else:
+#      password = getpass.getpass(prompt='Enter password for host %s and '
+#                                        'user %s: ' % (args.host,args.user))
+
+   context = None
+   if hasattr(ssl, '_create_unverified_context'):
+      context = ssl._create_unverified_context()
+   log_in = SmartConnect(host=host,
+                     user=user,
+                     pwd=pwd,
+                     port=int(port),
+                     sslContext=context)
+   if not log_in:
+       return("无法连接vCenter服务器")
+
+   atexit.register(Disconnect, log_in)
+
+   content = log_in.RetrieveContent()
+   for child in content.rootFolder.childEntity:
+      if hasattr(child, 'vmFolder'):
+         datacenter = child
+         vmFolder = datacenter.vmFolder
+         vmList = vmFolder.childEntity
+         for vm in vmList:
+             VM_LIST = Get_VM_List(vm)
+   return(VM_LIST)
