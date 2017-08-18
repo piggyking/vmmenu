@@ -16,6 +16,7 @@ import list_vm
 import re
 import migration_vm
 import subprocess
+import traceback
 
 from snack import *
 from pyVim import connect
@@ -486,6 +487,17 @@ if __name__ == "__main__":
     os.system('touch ./migration_state')
     os.system('touch ./migration_log_file')
     migration_folder = '/mnt/vmmenu_migration'
-    while quit != True:
-        main_form()
-    sys.exit(0)
+    try:
+        while quit != True:
+            main_form()
+        sys.exit(0)
+    except:
+        screen.finish()
+        bug = traceback.format_exc()
+        os.system('touch ./debug.log')
+        debug_log = open('./debug.log','a')
+        debug_log.write(bug)
+        debug_log.close()
+        os.system('clear')
+        print 'error exit,please check debug.log'
+        sys.exit(0)
